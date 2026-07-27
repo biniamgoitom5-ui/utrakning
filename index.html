@@ -34,13 +34,30 @@
         .input-group {
             margin-bottom: 20px;
         }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+        .checkbox-group input {
+            width: auto;
+            cursor: pointer;
+            transform: scale(1.2);
+        }
+        .checkbox-group label {
+            margin-bottom: 0;
+            cursor: pointer;
+            color: #dddddd;
+        }
         label {
             display: block;
             margin-bottom: 8px;
             font-size: 14px;
             color: #b3b3b3;
         }
-        input {
+        input[type="number"] {
             width: 100%;
             padding: 12px;
             border-radius: 10px;
@@ -68,21 +85,36 @@
         }
         .result-container {
             margin-top: 25px;
-            padding-top: 20px;
-            border-top: 1px solid #333;
+            padding: 20px;
+            border-radius: 12px;
             text-align: center;
             display: none;
+            background-color: #2a2a2a;
+            transition: all 0.3s ease;
         }
         .result-value {
             font-size: 36px;
             font-weight: bold;
-            color: #4cd964;
             margin: 10px 0;
         }
         .result-days {
-            font-size: 16px;
-            color: #b3b3b3;
+            font-size: 15px;
+            color: #cccccc;
+            margin-bottom: 15px;
         }
+        .comment-box {
+            font-style: italic;
+            font-weight: 500;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: rgba(0,0,0,0.2);
+            margin-top: 10px;
+        }
+        
+        /* Färgtema för smärttröskel */
+        .status-green { border: 2px solid #4cd964; color: #4cd964; }
+        .status-yellow { border: 2px solid #ffcc00; color: #ffcc00; }
+        .status-red { border: 2px solid #ff3b30; color: #ff3b30; }
     </style>
 </head>
 <body>
@@ -95,10 +127,14 @@
             <input type="number" id="lon" placeholder="t.ex. 40000" value="40000">
         </div>
 
-        <!-- NYTT FÄLT: Arbetstimmar per vecka -->
         <div class="input-group">
-            <label for="veckotimmar">Arbetstimmar per veckoarbetstid (h/vecka)</label>
+            <label for="veckotimmar">Arbetstimmar per vecka (h/vecka)</label>
             <input type="number" id="veckotimmar" placeholder="t.ex. 40" value="40">
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="kyrkan">
+            <label for="kyrkan">Medlem i Svenska kyrkan</label>
         </div>
         
         <div class="input-group">
@@ -109,40 +145,109 @@
         <button onclick="raknaUt()">Räkna ut arbetstid</button>
         
         <div class="result-container" id="resultatSektion">
-            <label>Detta köp kommer kosta dig:</label>
+            <label style="color:#aaa;">Detta köp kommer kosta dig:</label>
             <div class="result-value" id="timSvar">0 timmar</div>
             <div class="result-days" id="dagSvar">Motsvarar 0 arbetsdagar</div>
+            <div class="comment-box" id="kommentarSvar"></div>
         </div>
     </div>
 
     <script>
+        // Slumpade kommentarer uppdelade på nivåer
+        const kommentarer = {
+            gron: [
+                "Lugnt för plånboken! Passa på.",
+                "Bara en kort stund vid skrivbordet.",
+                "Ett litet streck i kalkylen, det överlever du!",
+                "Fickpengar i sammanhanget.",
+                "Svisch sa det, knappt märkbart!"
+            ],
+            gul: [
+                "Nu börjar det faktiskt märkas!",
+                "Det här kostar dig nästan en hel arbetsdag eller två.",
+                "Tänk till en extra gång – behöver du verkligen den?",
+                "En märkbar investering i din arbetstid.",
+                "Känns det fortfarande värt det efter två dagar på jobbet?"
+            ],
+            rod: [
+                "Oj, oj, oj... det här kostade visst en hel del!",
+                "Du får jobba en halv evighet för det här köpet.",
+                "Säker på att du inte klarar dig helt utan?",
+                "Det här är en rejäl tugga av din månadslön!",
+                "Dags att fundera på om du hellre vill ta utkomsten i ledighet?"
+            ]
+        };
+
+        // Ladda sparade inställningar när sidan öppnas
+        window.onload = function() {
+            if (localStorage.getItem('lon')) document.getElementById('lon').value = localStorage.getItem('lon');
+            if (localStorage.getItem('veckotimmar')) document.getElementById('veckotimmar').value = localStorage.getItem('veckotimmar');
+            if (localStorage.getItem('kyrkan')) document.getElementById('kyrkan').checked = localStorage.getItem('kyrkan') === 'true';
+        };
+
         function raknaUt() {
             const manadslon = parseFloat(document.getElementById('lon').value);
             const veckotimmar = parseFloat(document.getElementById('veckotimmar').value);
             const pris = parseFloat(document.getElementById('pris').value);
+            const arMedlemIKyrkan = document.getElementById('kyrkan').checked;
             
             if (!manadslon || !pris || !veckotimmar) {
-                alert("Vänligen fyll i lön, arbetstimmar och pris!");
+                alert("Vänligen fyll i alla fält!");
                 return;
             }
+
+            // Spara värden i mobilen för nästa gång
+            localStorage.setItem('lon', manadslon);
+            localStorage.setItem('veckotimmar', veckotimmar);
+            localStorage.setItem('kyrkan', arMedlemIKyrkan);
             
-            // Beräkna genomsnittliga arbetstimmar per månad utifrån veckotimmar
             const arbetstimmarPerManad = (veckotimmar * 52) / 12;
             
-            const skattesats = 0.23; // Ca 23% effektiv skatt (inkl. jobbskatteavdrag)
+            // Beräkna effektiv skatt (ca 23% bas + ca 1% kyrkoavgift om ikryssad)
+            let skattesats = 0.23;
+            if (arMedlemIKyrkan) {
+                skattesats += 0.01;
+            }
+
             const nettoLon = manadslon * (1 - skattesats);
             const nettoTimlon = nettoLon / arbetstimmarPerManad;
-            
             const timmarSomKravs = pris / nettoTimlon;
             
-            // Dagsberäkningen baseras nu dynamiskt på personens egen arbetsdag
             const timmarPerDag = veckotimmar / 5; 
             const dagarSomKravs = timmarSomKravs / timmarPerDag;
             
+            // Uppdatera texten
             document.getElementById('timSvar').innerText = timmarSomKravs.toFixed(1) + ' timmar';
             document.getElementById('dagSvar').innerText = 'Motsvarar cirka ' + dagarSomKravs.toFixed(1) + ' arbetsdagar efter skatt';
             
-            document.getElementById('resultatSektion').style.display = 'block';
+            // Bestäm färgtema och slumpa kommentar utifrån arbetstimmar
+            const resSektion = document.getElementById('resultatSektion');
+            const timValEl = document.getElementById('timSvar');
+            const kommentarEl = document.getElementById('kommentarSvar');
+            
+            resSektion.className = 'result-container'; // Nollställ klasser
+            
+            let valdKategori = 'gron';
+            if (timmarSomKravs < 4) {
+                resSektion.classList.add('status-green');
+                timValEl.style.color = '#4cd964';
+                valdKategori = 'gron';
+            } else if (timmarSomKravs <= 16) {
+                resSektion.classList.add('status-yellow');
+                timValEl.style.color = '#ffcc00';
+                valdKategori = 'gul';
+            } else {
+                resSektion.classList.add('status-red');
+                timValEl.style.color = '#ff3b30';
+                valdKategori = 'rod';
+            }
+
+            // Välj en slumpmässig kommentar ur rätt lista
+            const lista = kommentarer[valdKategori];
+            const slumpadKommentar = lista[Math.floor(Math.random() * lista.length)];
+            kommentarEl.innerText = `"${slumpadKommentar}"`;
+            
+            resSektion.style.display = 'block';
         }
     </script>
 
