@@ -57,7 +57,7 @@
             font-size: 14px;
             color: #b3b3b3;
         }
-        input[type="number"] {
+        input[type="number"], select {
             width: 100%;
             padding: 12px;
             border-radius: 10px;
@@ -132,9 +132,23 @@
             <input type="number" id="veckotimmar" placeholder="t.ex. 40" value="40">
         </div>
 
+        <!-- NYTT FÄLT: Skattetabell -->
+        <div class="input-group">
+            <label for="skattetabell">Din skattetabell (kommunalskatt)</label>
+            <select id="skattetabell">
+                <option value="30">Tabell 30 (ca 30% kommunalskatt)</option>
+                <option value="31">Tabell 31 (ca 31% kommunalskatt)</option>
+                <option value="32" selected>Tabell 32 (ca 32% kommunalskatt)</option>
+                <option value="33">Tabell 33 (ca 33% kommunalskatt)</option>
+                <option value="34">Tabell 34 (ca 34% kommunalskatt)</option>
+                <option value="35">Tabell 35 (ca 35% kommunalskatt)</option>
+                <option value="36">Tabell 36 (ca 36% kommunalskatt)</option>
+            </select>
+        </div>
+
         <div class="checkbox-group">
             <input type="checkbox" id="kyrkan">
-            <label for="kyrkan">Medlem i Svenska kyrkan</label>
+            <label for="kyrkan">Medlem i Svenska kyrkan (~1% extra)</label>
         </div>
         
         <div class="input-group">
@@ -153,7 +167,6 @@
     </div>
 
     <script>
-        // Slumpade kommentarer uppdelade på nivåer
         const kommentarer = {
             gron: [
                 "Lugnt för plånboken! Passa på.",
@@ -178,16 +191,39 @@
             ]
         };
 
-        // Ladda sparade inställningar när sidan öppnas
         window.onload = function() {
             if (localStorage.getItem('lon')) document.getElementById('lon').value = localStorage.getItem('lon');
             if (localStorage.getItem('veckotimmar')) document.getElementById('veckotimmar').value = localStorage.getItem('veckotimmar');
+            if (localStorage.getItem('skattetabell')) document.getElementById('skattetabell').value = localStorage.getItem('skattetabell');
             if (localStorage.getItem('kyrkan')) document.getElementById('kyrkan').checked = localStorage.getItem('kyrkan') === 'true';
         };
+
+        function beraknaNettoLon(brutto, tabell, arMedlemIKyrkan) {
+            // Beräkning av effektiv skattesats baserad på skattetabell + jobbskatteavdrag
+            let nominellSkatt = parseFloat(tabell) / 100;
+            if (arMedlemIKyrkan) {
+                nominellSkatt += 0.01; // Ca 1% kyrkoavgift
+            }
+
+            // Uppskattad effektiv skatt efter jobbskatteavdrag & grundavdrag för vanliga inkomster
+            // Jobbskatteavdraget reducerar den faktiska skatteprocenten med ca 7-9 procentenheter
+            let effektivSkatt = nominellSkatt - 0.085; 
+
+            // Statlig inkomstskatt (20%) över brytpunkten (ca 51 200 kr/mån)
+            if (brutto > 51200) {
+                const overSkikt = brutto - 51200;
+                const statligSkatt = overSkikt * 0.20;
+                const basNetto = (51200 * (1 - effektivSkatt));
+                return basNetto + (overSkikt * (1 - (effektivSkatt + 0.20)));
+            }
+
+            return brutto * (1 - effektivSkatt);
+        }
 
         function raknaUt() {
             const manadslon = parseFloat(document.getElementById('lon').value);
             const veckotimmar = parseFloat(document.getElementById('veckotimmar').value);
+            const skattetabell = document.getElementById('skattetabell').value;
             const pris = parseFloat(document.getElementById('pris').value);
             const arMedlemIKyrkan = document.getElementById('kyrkan').checked;
             
@@ -196,36 +232,28 @@
                 return;
             }
 
-            // Spara värden i mobilen för nästa gång
+            // Spara värden i mobilen
             localStorage.setItem('lon', manadslon);
             localStorage.setItem('veckotimmar', veckotimmar);
+            localStorage.setItem('skattetabell', skattetabell);
             localStorage.setItem('kyrkan', arMedlemIKyrkan);
             
             const arbetstimmarPerManad = (veckotimmar * 52) / 12;
-            
-            // Beräkna effektiv skatt (ca 23% bas + ca 1% kyrkoavgift om ikryssad)
-            let skattesats = 0.23;
-            if (arMedlemIKyrkan) {
-                skattesats += 0.01;
-            }
-
-            const nettoLon = manadslon * (1 - skattesats);
+            const nettoLon = beraknaNettoLon(manadslon, skattetabell, arMedlemIKyrkan);
             const nettoTimlon = nettoLon / arbetstimmarPerManad;
             const timmarSomKravs = pris / nettoTimlon;
             
             const timmarPerDag = veckotimmar / 5; 
             const dagarSomKravs = timmarSomKravs / timmarPerDag;
             
-            // Uppdatera texten
             document.getElementById('timSvar').innerText = timmarSomKravs.toFixed(1) + ' timmar';
             document.getElementById('dagSvar').innerText = 'Motsvarar cirka ' + dagarSomKravs.toFixed(1) + ' arbetsdagar efter skatt';
             
-            // Bestäm färgtema och slumpa kommentar utifrån arbetstimmar
             const resSektion = document.getElementById('resultatSektion');
             const timValEl = document.getElementById('timSvar');
             const kommentarEl = document.getElementById('kommentarSvar');
             
-            resSektion.className = 'result-container'; // Nollställ klasser
+            resSektion.className = 'result-container';
             
             let valdKategori = 'gron';
             if (timmarSomKravs < 4) {
@@ -242,7 +270,6 @@
                 valdKategori = 'rod';
             }
 
-            // Välj en slumpmässig kommentar ur rätt lista
             const lista = kommentarer[valdKategori];
             const slumpadKommentar = lista[Math.floor(Math.random() * lista.length)];
             kommentarEl.innerText = `"${slumpadKommentar}"`;
