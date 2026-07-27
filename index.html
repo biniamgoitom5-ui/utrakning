@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tid Är Pengar</title>
     <style>
-        /* Här bestämmer vi hur appen ser ut (Designen) */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #121212;
@@ -72,7 +71,7 @@
             padding-top: 20px;
             border-top: 1px solid #333;
             text-align: center;
-            display: none; /* Dold tills man klickar på knappen */
+            display: none;
         }
         .result-value {
             font-size: 36px;
@@ -95,6 +94,12 @@
             <label for="lon">Din månadslön före skatt (kr)</label>
             <input type="number" id="lon" placeholder="t.ex. 40000" value="40000">
         </div>
+
+        <!-- NYTT FÄLT: Arbetstimmar per vecka -->
+        <div class="input-group">
+            <label for="veckotimmar">Arbetstimmar per veckoarbetstid (h/vecka)</label>
+            <input type="number" id="veckotimmar" placeholder="t.ex. 40" value="40">
+        </div>
         
         <div class="input-group">
             <label for="pris">Vad kostar varan/tjänsten? (kr)</label>
@@ -112,31 +117,31 @@
 
     <script>
         function raknaUt() {
-            // Hämta siffrorna som användaren skrev in
             const manadslon = parseFloat(document.getElementById('lon').value);
+            const veckotimmar = parseFloat(document.getElementById('veckotimmar').value);
             const pris = parseFloat(document.getElementById('pris').value);
             
-            // Om något fält är tomt, gör inget
-            if (!manadslon || !pris) {
-                alert("Vänligen fyll i både lön och pris!");
+            if (!manadslon || !pris || !veckotimmar) {
+                alert("Vänligen fyll i lön, arbetstimmar och pris!");
                 return;
             }
             
-            // Samma logik vi använde i våra tidigare exempel
-            const skattesats = 0.23; // Ca 23% effektiv skatt (inkl. jobbskatteavdrag)
-            const arbetstimmarPerManad = 174;
+            // Beräkna genomsnittliga arbetstimmar per månad utifrån veckotimmar
+            const arbetstimmarPerManad = (veckotimmar * 52) / 12;
             
+            const skattesats = 0.23; // Ca 23% effektiv skatt (inkl. jobbskatteavdrag)
             const nettoLon = manadslon * (1 - skattesats);
             const nettoTimlon = nettoLon / arbetstimmarPerManad;
             
             const timmarSomKravs = pris / nettoTimlon;
-            const dagarSomKravs = timmarSomKravs / 8; // Baserat på 8h arbetsdag
             
-            // Visa resultatet på skärmen
+            // Dagsberäkningen baseras nu dynamiskt på personens egen arbetsdag
+            const timmarPerDag = veckotimmar / 5; 
+            const dagarSomKravs = timmarSomKravs / timmarPerDag;
+            
             document.getElementById('timSvar').innerText = timmarSomKravs.toFixed(1) + ' timmar';
             document.getElementById('dagSvar').innerText = 'Motsvarar cirka ' + dagarSomKravs.toFixed(1) + ' arbetsdagar efter skatt';
             
-            // Gör resultatboxen synlig
             document.getElementById('resultatSektion').style.display = 'block';
         }
     </script>
