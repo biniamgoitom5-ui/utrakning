@@ -151,7 +151,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border: 2px solid transparent;
+            border: 2px solid #555; /* Default fallback-ram */
             transition: all 0.2s ease;
         }
         .history-info {
@@ -190,19 +190,19 @@
         }
 
         /* Färgtema för huvudresultat */
-        .status-green { border: 2px solid #4cd964; color: #4cd964; }
-        .status-yellow { border: 2px solid #ffcc00; color: #ffcc00; }
-        .status-red { border: 2px solid #ff3b30; color: #ff3b30; }
+        .status-green { border: 2px solid #4cd964 !important; color: #4cd964; }
+        .status-yellow { border: 2px solid #ffcc00 !important; color: #ffcc00; }
+        .status-red { border: 2px solid #ff3b30 !important; color: #ff3b30; }
 
-        /* Färgade konturer för sparade rader */
-        .item-green { border-color: #4cd964; }
-        .item-green .history-time { color: #4cd964; }
+        /* Färgade konturer för sparade rader - tvingade med !important */
+        .item-gron { border-color: #4cd964 !important; }
+        .item-gron .history-time { color: #4cd964 !important; }
 
-        .item-yellow { border-color: #ffcc00; }
-        .item-yellow .history-time { color: #ffcc00; }
+        .item-gul { border-color: #ffcc00 !important; }
+        .item-gul .history-time { color: #ffcc00 !important; }
 
-        .item-red { border-color: #ff3b30; }
-        .item-red .history-time { color: #ff3b30; }
+        .item-rod { border-color: #ff3b30 !important; }
+        .item-rod .history-time { color: #ff3b30 !important; }
     </style>
 </head>
 <body>
@@ -418,8 +418,19 @@
             listaEl.innerHTML = '';
 
             sparadeKopLista.forEach(item => {
+                // Beräkna alltid kategori direkt från timmar för att garantera att det aldrig blir fel
+                let kat = 'gron';
+                const t = parseFloat(item.timmar);
+                if (t < 4) {
+                    kat = 'gron';
+                } else if (t <= 16) {
+                    kat = 'gul';
+                } else {
+                    kat = 'rod';
+                }
+
                 const div = document.createElement('div');
-                div.className = `history-item item-${item.kategori}`;
+                div.className = `history-item item-${kat}`;
                 div.innerHTML = `
                     <div class="history-info">
                         <span class="history-title">${item.namn}</span>
